@@ -66,7 +66,9 @@ class OptionChainCollector:
             data = pd.read_csv(StringIO(response.text))
             
             # Save timestamp of collection
-            self.last_collection_time = datetime.now()
+            import pytz
+            ist = pytz.timezone('Asia/Kolkata')
+            self.last_collection_time = datetime.now(ist)
             
             return data
             
