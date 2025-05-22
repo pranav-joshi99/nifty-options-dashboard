@@ -40,7 +40,13 @@ class OptionMetricsCalculator:
             return pd.DataFrame()
         
         # Get current timestamp
+        import pytz
+        ist = pytz.timezone('Asia/Kolkata')
         current_timestamp = pd.to_datetime(current_data['timestamp'].iloc[0])
+        if current_timestamp.tz is None:
+            current_timestamp = ist.localize(current_timestamp)
+        else:
+            current_timestamp = current_timestamp.astimezone(ist)
         
         # Get all available timestamps
         all_timestamps = self.db.get_timestamps(symbol, expiry)
