@@ -5,7 +5,7 @@ import logging
 import os
 from datetime import datetime, time
 from config.settings import LOGGING, DATA_COLLECTION
-import pandas as pd
+import pytz
 
 def setup_logging():
     """Configure the logging system."""
@@ -36,7 +36,8 @@ def is_trading_hours():
         bool: True if current time is within trading hours, False otherwise
     """
     # Get current time
-    now = datetime.now().time()
+    ist = pytz.timezone('Asia/Kolkata')
+    now = datetime.now(ist).time()
     
     # Parse trading hours from settings
     start_hour, start_minute = map(int, DATA_COLLECTION["trading_hours"]["start"].split(':'))
