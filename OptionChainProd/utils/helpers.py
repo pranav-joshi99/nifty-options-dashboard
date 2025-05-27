@@ -5,6 +5,7 @@ import logging
 import os
 from datetime import datetime, time
 from config.settings import LOGGING, DATA_COLLECTION
+import pandas as pd
 
 def setup_logging():
     """Configure the logging system."""
