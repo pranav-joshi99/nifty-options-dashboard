@@ -603,6 +603,12 @@ with col1:
     
     if last_updated and not isinstance(last_updated, str):
         try:
+            ist = pytz.timezone('Asia/Kolkata')
+            if last_updated.tzinfo is None:
+                last_updated = ist.localize(last_updated)
+
+            else:
+                last_updated = last_updated.astimezone(ist)
             last_updated_display = last_updated.strftime('%H:%M:%S')
         except:
             pass
