@@ -11,6 +11,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import threading
 import os
+import pytz
 
 # Import our modules
 from database.db_manager import DatabaseManager
@@ -324,8 +325,9 @@ def start_data_collection(symbol, expiry):
     st.session_state['collection_running'] = True
     st.session_state['collection_symbol'] = symbol
     st.session_state['collection_expiry'] = expiry
-    st.session_state['last_collection_time'] = datetime.now()
-    st.session_state['next_collection_time'] = datetime.now() + timedelta(
+    ist = pytz.timezone('Asia/Kolkata')
+    st.session_state['last_collection_time'] = datetime.now(ist)
+    st.session_state['next_collection_time'] = datetime.now(ist) + timedelta(
         minutes=DATA_COLLECTION["interval_minutes"]
     )
 
@@ -343,8 +345,9 @@ def collect_data_once(symbol, expiry):
             data, filepath, success = connector.collect_and_store(symbol, expiry)
             
             if success and data is not None:
-                st.session_state['last_collection_time'] = datetime.now()
-                st.session_state['next_collection_time'] = datetime.now() + timedelta(
+                ist = pytz.timezone('Asia/Kolkata')
+                st.session_state['last_collection_time'] = datetime.now(ist)
+                st.session_state['next_collection_time'] = datetime.now(ist) + timedelta(
                     minutes=DATA_COLLECTION["interval_minutes"]
                 )
                 st.session_state['last_collection_success'] = True
@@ -533,7 +536,8 @@ if st.session_state['last_collection_time']:
     )
 
 if st.session_state['next_collection_time'] and st.session_state['collection_running']:
-    time_diff = (st.session_state['next_collection_time'] - datetime.now()).total_seconds()
+    ist = pytz.timezone('Asia/Kolkata')
+    time_diff = (st.session_state['next_collection_time'] - datetime.now(ist)).total_seconds()
     
     if time_diff > 0:
         st.sidebar.progress(
@@ -672,7 +676,8 @@ else:
 # Auto-collection and refresh logic
 if st.session_state['collection_running'] and trading_active:
     # Check if it's time for next collection
-    current_time = datetime.now()
+    ist = pytz.timezone('Asia/Kolkata')
+    current_time = datetime.now(ist)
     
     if st.session_state['next_collection_time'] and current_time >= st.session_state['next_collection_time']:
         # Collect data
@@ -697,11 +702,12 @@ if st.session_state['collection_running'] and trading_active:
             )
         
         # Trigger a rerun to update UI
-        st.experimental_rerun()
+        st.rerun()
 
 # Add periodic refresh for countdown
 if st.session_state['collection_running'] and st.session_state['next_collection_time']:
     # Add auto-refresh every 10 seconds to update countdown
-    time_to_wait = min(10, max(1, int((st.session_state['next_collection_time'] - datetime.now()).total_seconds())))
+    ist = pytz.timezone('Asia/Kolkata')
+    time_to_wait = min(10, max(1, int((st.session_state['next_collection_time'] - datetime.now(ist)).total_seconds())))
     time.sleep(time_to_wait)
     st.rerun()
