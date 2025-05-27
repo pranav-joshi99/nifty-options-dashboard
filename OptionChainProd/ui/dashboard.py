@@ -441,7 +441,7 @@ if 'dashboard_success' not in st.session_state:
 user_settings = db.get_latest_user_settings()
 
 # Header
-st.title("📊 NIFTY Options Analysis Dashboard")
+st.title("📊 AccuNirvana Options Analysis Dashboard")
 
 # Sidebar inputs
 st.sidebar.markdown("<div class='sidebar-header'>Settings</div>", unsafe_allow_html=True)
