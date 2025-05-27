@@ -85,7 +85,8 @@ st.markdown("""
     
     /* Highlight row in table */
     .highlight {
-        background-color: rgba(0, 206, 209, 0.2) !important;
+         border-left: 4px solid #FFD700 !important;
+         background-color: transparent !important;
     }
     
     /* Dashboard tiles */
