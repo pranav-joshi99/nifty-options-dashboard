@@ -19,128 +19,133 @@ class OptionMetricsCalculator:
         self.db = DatabaseManager()
     
     def calculate_oi_changes(self, symbol, expiry, current_data=None):
-        """
-        Calculate OI changes for all configured intervals.
-        
-        Args:
-            symbol (str): Symbol name
-            expiry (str): Expiry date
-            current_data (pandas.DataFrame, optional): Current option data.
-                If None, fetch latest data from database.
-                
-        Returns:
-            pandas.DataFrame: Calculated OI changes
-        """
-        import pytz
-        ist = pytz.timezone('Asia/Kolkata')
-        
-        # Get current data if not provided
-        if current_data is None:
-            current_data = self.db.get_latest_option_data(symbol, expiry)
+    """
+    Calculate OI changes for all configured intervals.
+    
+    Args:
+        symbol (str): Symbol name
+        expiry (str): Expiry date
+        current_data (pandas.DataFrame, optional): Current option data.
+            If None, fetch latest data from database.
             
-        if current_data.empty:
-            logger.error("No current data available for OI change calculation")
-            return pd.DataFrame()
+    Returns:
+        pandas.DataFrame: Calculated OI changes
+    """
+    import pytz
+    ist = pytz.timezone('Asia/Kolkata')
+    
+    # Get current data if not provided
+    if current_data is None:
+        current_data = self.db.get_latest_option_data(symbol, expiry)
         
-        # Get current timestamp and ensure it's timezone-aware
-        current_timestamp = pd.to_datetime(current_data['timestamp'].iloc[0])
-        if current_timestamp.tz is None:
-            current_timestamp = ist.localize(current_timestamp)
+    if current_data.empty:
+        logger.error("No current data available for OI change calculation")
+        return pd.DataFrame()
+    
+    # Get current timestamp
+    current_timestamp = pd.to_datetime(current_data['timestamp'].iloc[0])
+    
+    # Ensure current_timestamp is timezone-aware
+    if current_timestamp.tz is None:
+        current_timestamp = ist.localize(current_timestamp)
+    else:
+        current_timestamp = current_timestamp.astimezone(ist)
+    
+    # Get all available timestamps from database
+    db_timestamps = self.db.get_timestamps(symbol, expiry)
+    
+    if not db_timestamps:
+        logger.error("No timestamps available for OI change calculation")
+        return pd.DataFrame()
+    
+    # Convert string timestamps to timezone-aware datetime objects
+    all_timestamps = []
+    for ts_str in db_timestamps:
+        dt = pd.to_datetime(ts_str)
+        # Make timezone-aware if not already
+        if dt.tz is None:
+            dt = ist.localize(dt)
         else:
-            current_timestamp = current_timestamp.astimezone(ist)
+            dt = dt.astimezone(ist)
+        all_timestamps.append(dt)
+    
+    # Initialize results dataframe
+    results = []
+    
+    # Calculate OI changes for each interval
+    for interval_minutes in DATA_COLLECTION["analysis_intervals"]:
+        # Calculate target timestamp (approximately)
+        target_timestamp = current_timestamp - timedelta(minutes=interval_minutes)
         
-        # Get all available timestamps
-        all_timestamps = self.db.get_timestamps(symbol, expiry)
+        # Find timestamps before current timestamp
+        past_timestamps = [ts for ts in all_timestamps if ts < current_timestamp]
         
-        if not all_timestamps:
-            logger.error("No timestamps available for OI change calculation")
-            return pd.DataFrame()
+        if not past_timestamps:
+            logger.warning(f"No past data found for {interval_minutes} minute interval")
+            continue
         
-        # Convert string timestamps to datetime objects and make them timezone-aware
-        all_timestamps = []
-        for ts in self.db.get_timestamps(symbol, expiry):
-            dt = pd.to_datetime(ts)
-            if dt.tz is None:
-                dt = ist.localize(dt)
-            else:
-                dt = dt.astimezone(ist)
-            all_timestamps.append(dt)
+        # Find closest timestamp
+        closest_timestamp = min(
+            past_timestamps,
+            key=lambda x: abs((x - target_timestamp).total_seconds())
+        )
         
-        # Initialize results dataframe
-        results = []
+        # Get data for the closest timestamp
+        past_data = self.db.get_option_data_by_timestamp(
+            symbol, 
+            expiry, 
+            closest_timestamp
+        )
         
-        # Calculate OI changes for each interval
-        for interval_minutes in DATA_COLLECTION["analysis_intervals"]:
-            # Calculate target timestamp (approximately)
-            target_timestamp = current_timestamp - timedelta(minutes=interval_minutes)
-            
-            # Find closest timestamp
-            closest_timestamp = min(
-                [ts for ts in all_timestamps if ts < current_timestamp],
-                key=lambda x: abs((x - target_timestamp).total_seconds()),
-                default=None
-            )
-            
-            if closest_timestamp is None:
-                logger.warning(f"No data found for {interval_minutes} minute interval")
-                continue
-            
-            # Get data for the closest timestamp
-            past_data = self.db.get_option_data_by_timestamp(
-                symbol, 
-                expiry, 
-                closest_timestamp
-            )
-            
-            if past_data.empty:
-                logger.warning(f"Empty data for timestamp {closest_timestamp}")
-                continue
-            
-            # Calculate actual interval in minutes
-            actual_interval = round((current_timestamp - closest_timestamp).total_seconds() / 60)
-            
-            logger.info(f"Calculating changes for requested {interval_minutes}min interval "
-                       f"(actual: {actual_interval}min, {closest_timestamp})")
-            
-            # Merge current and past data
-            merged = pd.merge(
-                current_data, 
-                past_data,
-                on='strike', 
-                suffixes=('_current', '_past')
-            )
-            
-            # Calculate OI changes
-            for _, row in merged.iterrows():
-                # Calculate CE OI change
-                try:
-                    ce_oi_change = row['call_oi_current'] - row['call_oi_past']
-                    if pd.isna(ce_oi_change):
-                        ce_oi_change = 0
-                except (KeyError, TypeError):
+        if past_data.empty:
+            logger.warning(f"Empty data for timestamp {closest_timestamp}")
+            continue
+        
+        # Calculate actual interval in minutes
+        actual_interval = round((current_timestamp - closest_timestamp).total_seconds() / 60)
+        
+        logger.info(f"Calculating changes for requested {interval_minutes}min interval "
+                   f"(actual: {actual_interval}min, {closest_timestamp})")
+        
+        # Merge current and past data
+        merged = pd.merge(
+            current_data, 
+            past_data,
+            on='strike', 
+            suffixes=('_current', '_past')
+        )
+        
+        # Calculate OI changes
+        for _, row in merged.iterrows():
+            # Calculate CE OI change
+            try:
+                ce_oi_change = row['call_oi_current'] - row['call_oi_past']
+                if pd.isna(ce_oi_change):
                     ce_oi_change = 0
-                
-                # Calculate PE OI change
-                try:
-                    pe_oi_change = row['put_oi_current'] - row['put_oi_past']
-                    if pd.isna(pe_oi_change):
-                        pe_oi_change = 0
-                except (KeyError, TypeError):
+            except (KeyError, TypeError):
+                ce_oi_change = 0
+            
+            # Calculate PE OI change
+            try:
+                pe_oi_change = row['put_oi_current'] - row['put_oi_past']
+                if pd.isna(pe_oi_change):
                     pe_oi_change = 0
-                
-                # Add to results
-                results.append({
-                    'timestamp': current_timestamp,
-                    'symbol': symbol,
-                    'expiry': expiry,
-                    'strike': row['strike'],
-                    'interval': actual_interval,
-                    'ce_oi_change': ce_oi_change,
-                    'pe_oi_change': pe_oi_change
-                })
-        
-        # Convert to DataFrame
-        return pd.DataFrame(results)
+            except (KeyError, TypeError):
+                pe_oi_change = 0
+            
+            # Add to results
+            results.append({
+                'timestamp': current_timestamp,
+                'symbol': symbol,
+                'expiry': expiry,
+                'strike': row['strike'],
+                'interval': actual_interval,
+                'ce_oi_change': ce_oi_change,
+                'pe_oi_change': pe_oi_change
+            })
+    
+    # Convert to DataFrame
+    return pd.DataFrame(results)
         
     def process_latest_data(self, symbol, expiry, currently_trading, range_limit, highlight_limit):
         """
