@@ -384,14 +384,22 @@ def update_dashboard_data(symbol, expiry, currently_trading, range_limit, highli
         # Store result in session state
         if result['success']:
             st.session_state['dashboard_data'] = result['data']
+            
+            # Ensure timestamp is in IST
             ts = result['timestamp']
+            
+            # Convert string to datetime if needed
+            if isinstance(ts, str):
+                ts = pd.to_datetime(ts)
+            
+            # Now handle timezone
             if ts.tzinfo is None:
                 ist = pytz.timezone('Asia/Kolkata')
                 ts = ist.localize(ts)
             else:
                 ist = pytz.timezone('Asia/Kolkata')
                 ts = ts.astimezone(ist)
-    
+            
             st.session_state['dashboard_timestamp'] = ts
             st.session_state['dashboard_success'] = True
             return True
