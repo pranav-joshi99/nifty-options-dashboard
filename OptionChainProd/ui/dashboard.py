@@ -728,9 +728,9 @@ if st.session_state['collection_running'] and trading_active:
         st.rerun()
 
 # Add periodic refresh for countdown
-if st.session_state['collection_running'] and st.session_state['next_collection_time']:
+#if st.session_state['collection_running'] and st.session_state['next_collection_time']:
     # Add auto-refresh every 10 seconds to update countdown
-    ist = pytz.timezone('Asia/Kolkata')
-    time_to_wait = min(10, max(1, int((st.session_state['next_collection_time'] - datetime.now(ist)).total_seconds())))
-    time.sleep(time_to_wait)
-    st.rerun()
+    #ist = pytz.timezone('Asia/Kolkata')
+    #time_to_wait = min(10, max(1, int((st.session_state['next_collection_time'] - datetime.now(ist)).total_seconds())))
+    #time.sleep(time_to_wait)
+    #st.rerun()
