@@ -4,8 +4,8 @@ Configuration settings for the NIFTY Options Dashboard application.
 
 # API credentials
 API_CREDENTIALS = {
-    "username": "Trial139",
-    "password": "niraj139",
+    "username": "tdwsp681",
+    "password": "niraj@681",
 }
 
 # API endpoints
