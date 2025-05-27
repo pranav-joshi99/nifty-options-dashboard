@@ -31,6 +31,9 @@ class OptionMetricsCalculator:
         Returns:
             pandas.DataFrame: Calculated OI changes
         """
+        import pytz
+        ist = pytz.timezone('Asia/Kolkata')
+        
         # Get current data if not provided
         if current_data is None:
             current_data = self.db.get_latest_option_data(symbol, expiry)
@@ -39,9 +42,7 @@ class OptionMetricsCalculator:
             logger.error("No current data available for OI change calculation")
             return pd.DataFrame()
         
-        # Get current timestamp
-        import pytz
-        ist = pytz.timezone('Asia/Kolkata')
+        # Get current timestamp and ensure it's timezone-aware
         current_timestamp = pd.to_datetime(current_data['timestamp'].iloc[0])
         if current_timestamp.tz is None:
             current_timestamp = ist.localize(current_timestamp)
@@ -55,8 +56,15 @@ class OptionMetricsCalculator:
             logger.error("No timestamps available for OI change calculation")
             return pd.DataFrame()
         
-        # Convert string timestamps to datetime objects
-        all_timestamps = [pd.to_datetime(ts) for ts in all_timestamps]
+        # Convert string timestamps to datetime objects and make them timezone-aware
+        all_timestamps = []
+        for ts in self.db.get_timestamps(symbol, expiry):
+            dt = pd.to_datetime(ts)
+            if dt.tz is None:
+                dt = ist.localize(dt)
+            else:
+                dt = dt.astimezone(ist)
+            all_timestamps.append(dt)
         
         # Initialize results dataframe
         results = []
