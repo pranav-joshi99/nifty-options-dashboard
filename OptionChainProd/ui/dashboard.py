@@ -697,20 +697,25 @@ else:
     st.info("Click 'Refresh Dashboard' to view data")
 
 # Auto-collection and refresh logic
-# Auto-collection logic - simplified
 if st.session_state['collection_running'] and trading_active:
-    if 'last_auto_check' not in st.session_state:
-        st.session_state['last_auto_check'] = datetime.now(pytz.timezone('Asia/Kolkata'))
+    # Check if it's time for next collection
+    ist = pytz.timezone('Asia/Kolkata')
+    current_time = datetime.now(ist)
     
-    current_time = datetime.now(pytz.timezone('Asia/Kolkata'))
-    time_since_last = (current_time - st.session_state['last_auto_check']).total_seconds()
-    
-    if time_since_last >= 300:  # 5 minutes
-        collect_data_once(
+    if st.session_state['next_collection_time'] and current_time >= st.session_state['next_collection_time']:
+        # Collect data
+        success = collect_data_once(
             st.session_state['collection_symbol'],
             st.session_state['collection_expiry']
         )
-        if auto_refresh:
+        
+        # Update next collection time
+        st.session_state['next_collection_time'] = current_time + timedelta(
+            minutes=DATA_COLLECTION["interval_minutes"]
+        )
+        
+        # Auto-refresh dashboard if enabled
+        if success and auto_refresh:
             update_dashboard_data(
                 symbol,
                 expiry,
@@ -718,12 +723,14 @@ if st.session_state['collection_running'] and trading_active:
                 range_limit,
                 highlight_limit
             )
-        st.session_state['last_auto_check'] = current_time
+        
+        # Trigger a rerun to update UI
+        st.rerun()
 
 # Add periodic refresh for countdown
-#if st.session_state['collection_running'] and st.session_state['next_collection_time']:
+if st.session_state['collection_running'] and st.session_state['next_collection_time']:
     # Add auto-refresh every 10 seconds to update countdown
-    #ist = pytz.timezone('Asia/Kolkata')
-    #time_to_wait = min(10, max(1, int((st.session_state['next_collection_time'] - datetime.now(ist)).total_seconds())))
-    #time.sleep(time_to_wait)
-    #st.rerun()
+    ist = pytz.timezone('Asia/Kolkata')
+    time_to_wait = min(10, max(1, int((st.session_state['next_collection_time'] - datetime.now(ist)).total_seconds())))
+    time.sleep(time_to_wait)
+    st.rerun()
