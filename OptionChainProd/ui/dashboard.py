@@ -184,6 +184,21 @@ st.markdown("""
     .stButton>button:hover {
         background-color: #00A0A0;
     }
+
+    .dataframe thead {
+    position: sticky;
+    top: 0;
+    background-color: #1A1E24;
+    z-index: 10;
+    box-shadow: 0 2px 5px -2px rgba(0,0,0,0.3);
+    }
+
+    .table-container {
+    max-height: 70vh;
+    overflow-y: auto;
+    overflow-x: auto;
+    }
+
 </style>
 """, unsafe_allow_html=True)
 
@@ -278,7 +293,7 @@ def display_oi_table(df):
     display_cols = [col for col in cols if col != 'highlight']
     
     # Create HTML output
-    html_output = "<div style='overflow-x: auto;'><table class='dataframe'>"
+    html_output = "<div class='table-container'><table class='dataframe'>"
     
     # Table header
     html_output += "<thead><tr>"
