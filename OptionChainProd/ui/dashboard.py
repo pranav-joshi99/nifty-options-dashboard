@@ -620,19 +620,34 @@ with col1:
     if last_updated and not isinstance(last_updated, str):
         try:
             ist = pytz.timezone('Asia/Kolkata')
+            utc = pytz.timezone('UTC')
             
-            # If datetime is naive (no timezone), assume it's UTC and localize it
+            # Debug: print the original datetime and its timezone
+            print(f"Original datetime: {last_updated}")
+            print(f"Original timezone: {last_updated.tzinfo}")
+            
+            # Handle different timezone scenarios
             if last_updated.tzinfo is None:
-                utc = pytz.timezone('UTC')
-                last_updated = utc.localize(last_updated)
+                # Naive datetime - assume it's UTC
+                last_updated_utc = utc.localize(last_updated)
+            elif last_updated.tzinfo.zone == 'UTC' or str(last_updated.tzinfo) == 'UTC':
+                # Already UTC timezone
+                last_updated_utc = last_updated
+            else:
+                # Other timezone - convert to UTC first
+                last_updated_utc = last_updated.astimezone(utc)
             
-            # Convert to IST
-            last_updated_ist = last_updated.astimezone(ist)
+            # Convert UTC to IST
+            last_updated_ist = last_updated_utc.astimezone(ist)
             last_updated_display = last_updated_ist.strftime('%H:%M:%S')
+            
+            # Debug: print the converted time
+            print(f"Converted to IST: {last_updated_ist}")
             
         except Exception as e:
             # For debugging - you can remove this print in production
             print(f"Timezone conversion error: {e}")
+            print(f"Error type: {type(e)}")
             last_updated_display = "Error converting time"
     elif isinstance(last_updated, str):
         last_updated_display = last_updated
