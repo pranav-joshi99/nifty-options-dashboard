@@ -620,22 +620,28 @@ with col1:
     if last_updated and not isinstance(last_updated, str):
         try:
             ist = pytz.timezone('Asia/Kolkata')
+            
+            # If datetime is naive (no timezone), assume it's UTC and localize it
             if last_updated.tzinfo is None:
-                last_updated = ist.localize(last_updated)
-
-            else:
-                last_updated = last_updated.astimezone(ist)
-            last_updated_display = last_updated.strftime('%H:%M:%S')
-        except:
-            pass
+                utc = pytz.timezone('UTC')
+                last_updated = utc.localize(last_updated)
+            
+            # Convert to IST
+            last_updated_ist = last_updated.astimezone(ist)
+            last_updated_display = last_updated_ist.strftime('%H:%M:%S')
+            
+        except Exception as e:
+            # For debugging - you can remove this print in production
+            print(f"Timezone conversion error: {e}")
+            last_updated_display = "Error converting time"
     elif isinstance(last_updated, str):
         last_updated_display = last_updated
     
     st.markdown(
         f"""
-        <div class="metric-card">
-            <div class="metric-title">Last Updated</div>
-            <div class="metric-value">{last_updated_display}</div>
+        <div style="text-align: center;">
+            <h4>Last Updated</h4>
+            <p style="font-size: 18px; font-weight: bold;">{last_updated_display}</p>
         </div>
         """,
         unsafe_allow_html=True
